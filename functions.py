@@ -33,7 +33,7 @@ class Tanh(Function):
         return np.tanh(x)
 
     def backward(self, gy):
-        y, = self.outputs[0]()
+        y = self.outputs[0]()
         return gy * (1 - y * y)
 
 
