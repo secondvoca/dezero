@@ -1,6 +1,7 @@
 import contextlib
 import weakref
 import numpy as np
+import dezero
 
 
 class Variable:
@@ -42,6 +43,18 @@ class Variable:
     @property
     def dtype(self):
         return self.data.dtype
+
+    @property
+    def T(self):
+        return dezero.functions.transpose(self)
+
+    def transpose(self):
+        return dezero.functions.transpose(self)
+
+    def reshape(self, *shape):
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = shape[0]
+        return dezero.functions.reshape(self, shape)
 
     def cleargrad(self):
         self.grad = None
