@@ -8,7 +8,7 @@ class Transpose(Function):
         return np.transpose(x)
 
     def backward(self, gy):
-        return np.transpose(gy)
+        return transpose(gy)
 
 
 def transpose(x):
