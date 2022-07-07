@@ -1,18 +1,90 @@
+from turtle import forward, shape
 from dezero.core import as_variable
 import numpy as np
 from dezero.core import Function
+from dezero import utils
+
+
+class Sum(Function):
+    def __init__(self, axis, keepdims):
+        self.axis = axis
+        self.keepdims = keepdims
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = x.sum(axis=self.axis, keepdims=self.keepdims)
+        return y
+
+    def backward(self, gy):
+        gy = utils.reshape_sum_backward(
+            gy, self.x_shape, self.axis, self.keepdims)
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+
+
+def sum(x, axis=None, keepdims=False):
+    return Sum(axis, keepdims)(x)
+
+
+class SumTo(Function):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = utils.sum_to(x, self.shape)
+        return y
+
+    def backward(self, gy):
+        gx = broadcast_to(gy, self.x_shape)
+        return gx
+
+
+def sum_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return SumTo(shape)(x)
+
+
+class Broadcast_to(Function):
+    def __init__(self, shape):
+        self.shape = shape
+
+    def forward(self, x):
+        self.x_shape = x.shape
+        y = np.broadcast_to(x, self.shape)
+        return y
+
+    def backward(self, gy):
+        gx = sum_to(gy, self.x_shape)
+        return gx
+
+
+def broadcast_to(x, shape):
+    if x.shape == shape:
+        return as_variable(x)
+    return Broadcast_to(shape)(x)
 
 
 class Transpose(Function):
+    def __init__(self, axes=None):
+        self.axes = axes
+
     def forward(self, x):
-        return np.transpose(x)
+        y = x.transpose(self.axes)
+        return y
 
     def backward(self, gy):
-        return transpose(gy)
+        if self.axes is None:
+            return transpose(gy)
+
+        axes_len = len(self.axes)
+        inv_axes = tuple(np.argsort([ax % axes_len for ax in self.axes]))
+        return transpose(gy, inv_axes)
 
 
-def transpose(x):
-    return Transpose()(x)
+def transpose(x, axes=None):
+    return Transpose(axes)(x)
 
 
 class Reshape(Function):

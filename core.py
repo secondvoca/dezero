@@ -48,8 +48,16 @@ class Variable:
     def T(self):
         return dezero.functions.transpose(self)
 
-    def transpose(self):
-        return dezero.functions.transpose(self)
+    def sum(self, axis=None, keepdims=False):
+        return dezero.functions.sum(self, axis, keepdims)
+
+    def transpose(self, *axes):
+        if len(axes) == 0:
+            axes = None
+        elif len(axes) == 1:
+            if isinstance(axes[0], (tuple, list)) or axes[0] is None:
+                axes = axes[0]
+        return dezero.functions.transpose(self, axes)
 
     def reshape(self, *shape):
         if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
@@ -176,19 +184,32 @@ class Pow(Function):
 
 class Div(Function):
     def forward(self, x0, x1):
-        return x0 / x1
+        y = x0 / x1
+        return y
 
     def backward(self, gy):
         x0, x1 = self.inputs
-        return gy / x1, gy * (-x0 / x1 ** 2)
+        gx0 = gy / x1
+        gx1 = gy * (-x0 / x1 ** 2)
+        if x0.shape != x1.shape:  # for broadcast
+            gx0 = dezero.functions.sum_to(gx0, x0.shape)
+            gx1 = dezero.functions.sum_to(gx1, x1.shape)
+        return gx0, gx1
 
 
 class Sub(Function):
     def forward(self, x0, x1):
-        return x0 - x1
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
+        y = x0 - x1
+        return y
 
     def backward(self, gy):
-        return gy, -gy
+        gx0 = gy
+        gx1 = -gy
+        if self.x0_shape != self.x1_shape:  # for broadcast
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 
 class Neg(Function):
@@ -201,21 +222,32 @@ class Neg(Function):
 
 class Mul(Function):
     def forward(self, x0, x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 * x1
         return y
 
     def backward(self, gy):
         x0, x1 = self.inputs
-        return gy * x1, gy * x0
+        gx0 = gy * x1
+        gx1 = gy * x0
+        if x0.shape != x1.shape:  # for broadcast
+            gx0 = dezero.functions.sum_to(gx0, x0.shape)
+            gx1 = dezero.functions.sum_to(gx1, x1.shape)
+        return gx0, gx1
 
 
 class Add(Function):
     def forward(self, x0, x1):
+        self.x0_shape, self.x1_shape = x0.shape, x1.shape
         y = x0 + x1
         return y
 
     def backward(self, gy):
-        return gy, gy
+        gx0, gx1 = gy, gy
+        if self.x0_shape != self.x1_shape:
+            gx0 = dezero.functions.sum_to(gx0, self.x0_shape)
+            gx1 = dezero.functions.sum_to(gx1, self.x1_shape)
+        return gx0, gx1
 
 
 def pow(x, c):
