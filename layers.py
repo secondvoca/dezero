@@ -17,7 +17,7 @@ class Layer:
         return outputs if len(outputs) > 1 else outputs[0]
 
     def __setattr__(self, name, value):
-        if isinstance(value, Parameter, Layer):
+        if isinstance(value, (Parameter, Layer)):
             self._params.add(name)
         super().__setattr__(name, value)
 
