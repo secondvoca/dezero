@@ -4,6 +4,13 @@ from dezero.core import Function
 from dezero import utils
 
 
+def softmax_simple(x, axis=1):
+    x = as_variable(x)
+    y = exp(x)
+    sum_y = sum(y, axis=axis, keepdims=True)
+    return y / sum_y
+
+
 class GetItemGrad(Function):
     def __init__(self, slices, in_shape):
         self.slices = slices
